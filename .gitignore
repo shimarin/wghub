@@ -1,0 +1,8 @@
+wghub-server
+wghub-client
+*.o
+*.a
+*.bin
+*.so
+privkey.txt
+.vscode
