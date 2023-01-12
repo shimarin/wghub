@@ -20,6 +20,7 @@ libwghub.a: wghub.o
 	g++ -std=c++20 -Wall -c -o $@ $<
 
 install: all
+	mkdir -p /usr/local/bin /usr/local/include /usr/local/lib
 	cp -a wghub-server wghub-client /usr/local/bin/
 	cp -a libwghub.a /usr/local/lib/
 	cp -a wghub.h /usr/local/include/
