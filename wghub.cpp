@@ -6,9 +6,11 @@
 
 static const auto cipher = EVP_des_ede3_cbc();
 
-static std::pair<std::shared_ptr<uint8_t[]>, std::shared_ptr<uint8_t[]>> generate_key_and_iv_from_shared_key(const EVP_CIPHER* cipher, EVP_PKEY* privkey/*mine*/, EVP_PKEY* pubkey/*peer's*/)
+static std::pair<std::shared_ptr<uint8_t[]>, std::shared_ptr<uint8_t[]>> 
+    generate_key_and_iv_from_shared_key(const EVP_CIPHER* cipher, EVP_PKEY* privkey/*mine*/, EVP_PKEY* pubkey/*peer's*/)
 {
-    std::shared_ptr<EVP_PKEY_CTX> pkey_ctx(EVP_PKEY_CTX_new(privkey, EVP_PKEY_get0_engine(privkey)), EVP_PKEY_CTX_free);    EVP_PKEY_derive_init(pkey_ctx.get());
+    std::shared_ptr<EVP_PKEY_CTX> pkey_ctx(EVP_PKEY_CTX_new(privkey, EVP_PKEY_get0_engine(privkey)), EVP_PKEY_CTX_free);
+    EVP_PKEY_derive_init(pkey_ctx.get());
     EVP_PKEY_derive_set_peer(pkey_ctx.get(), pubkey);
     size_t skeylen;
     EVP_PKEY_derive(pkey_ctx.get(), NULL, &skeylen);
@@ -26,7 +28,7 @@ static std::pair<std::shared_ptr<uint8_t[]>, std::shared_ptr<uint8_t[]>> generat
 static std::shared_ptr<EVP_PKEY> get_privkey(const std::string& privkey_b64)
 {
     auto privkey_bytes = wghub::internal::base64_decode(privkey_b64);
-    if (privkey_bytes.second < wghub::internal::WG_KEY_LEN) throw std::runtime_error("Iinvalid private key provided");
+    if (privkey_bytes.second < wghub::internal::WG_KEY_LEN) throw std::runtime_error("Invalid private key provided");
     //else
     std::shared_ptr<EVP_PKEY> privkey(EVP_PKEY_new_raw_private_key(EVP_PKEY_X25519, NULL, privkey_bytes.first.get(), wghub::internal::WG_KEY_LEN), EVP_PKEY_free);
     if (!privkey) throw std::runtime_error("EVP_PKEY_new_raw_private_key() failed");
