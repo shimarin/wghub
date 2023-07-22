@@ -143,7 +143,7 @@ int authorize(const std::string& peer_pubkey_b64, const std::string& serial, boo
         std::ofstream f(client_file);
         if (!f) throw std::runtime_error("client file couldn't be open for write");
         //else
-        f << wghub::internal::base64_encode(my_pubkey_bytes, my_pubkey_len) << ',' << wghub::internal::encrypt(json, privkey.get(), peer_pubkey.get()) << std::endl;
+        f << wghub::internal::base64_encode(my_pubkey_bytes, my_pubkey_len) << ',' << wghub::internal::encrypt(json, privkey, peer_pubkey) << std::endl;
     } else {
         throw std::runtime_error("Client file " + client_file.string() + " already exists.  Use --force to overwrite");
     }
@@ -211,7 +211,7 @@ int show(const std::string& serial_or_pubkey_b64)
     auto comma_pos = line.find_first_of(',');
     if (comma_pos != line.npos) line.erase(line.begin(), line.begin() + comma_pos + 1);
 
-    std::cout << wghub::internal::decrypt(line, privkey.get(), peer_pubkey.get()) << std::endl;
+    std::cout << wghub::internal::decrypt(line, privkey, peer_pubkey) << std::endl;
     return 0;
 }
 

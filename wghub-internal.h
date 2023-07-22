@@ -10,8 +10,8 @@ namespace wghub::internal {
     std::string base64_encode(const uint8_t* bytes, size_t len);
     std::pair<std::shared_ptr<uint8_t[]>,size_t> base64_decode(const std::string& base64);
     std::string make_urlsafe(const std::string& base64str);
-    std::string encrypt(const std::string& str, EVP_PKEY* privkey/*mine*/, EVP_PKEY* pubkey/*peer's*/);
-    std::string decrypt(const std::string& encrypted_b64, EVP_PKEY* privkey/*mine*/, EVP_PKEY* pubkey/*peer's*/);
+    std::string encrypt(const std::string& str, const std::shared_ptr<EVP_PKEY> privkey/*mine*/, const std::shared_ptr<EVP_PKEY> pubkey/*peer's*/);
+    std::string decrypt(const std::string& encrypted_b64, const std::shared_ptr<EVP_PKEY> privkey/*mine*/, const std::shared_ptr<EVP_PKEY> pubkey/*peer's*/);
 }
 
 #endif // __WGHUB_INTERNAL_H__

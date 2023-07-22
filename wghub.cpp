@@ -9,13 +9,18 @@ static const auto cipher = EVP_des_ede3_cbc();
 static std::pair<std::shared_ptr<uint8_t[]>, std::shared_ptr<uint8_t[]>> 
     generate_key_and_iv_from_shared_key(const EVP_CIPHER* cipher, EVP_PKEY* privkey/*mine*/, EVP_PKEY* pubkey/*peer's*/)
 {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    std::shared_ptr<EVP_PKEY_CTX> pkey_ctx(EVP_PKEY_CTX_new_from_pkey(NULL, privkey, NULL), EVP_PKEY_CTX_free);
+#else
     std::shared_ptr<EVP_PKEY_CTX> pkey_ctx(EVP_PKEY_CTX_new(privkey, EVP_PKEY_get0_engine(privkey)), EVP_PKEY_CTX_free);
-    EVP_PKEY_derive_init(pkey_ctx.get());
-    EVP_PKEY_derive_set_peer(pkey_ctx.get(), pubkey);
+#endif
+    if (!pkey_ctx) throw std::runtime_error("EVP_PKEY_CTX_new_from_pkey() failed");
+    if (EVP_PKEY_derive_init(pkey_ctx.get()) <= 0) throw std::runtime_error("EVP_PKEY_derive_init() failed");
+    if (EVP_PKEY_derive_set_peer(pkey_ctx.get(), pubkey) <= 0) throw std::runtime_error("EVP_PKEY_derive_set_peer() failed");
     size_t skeylen;
-    EVP_PKEY_derive(pkey_ctx.get(), NULL, &skeylen);
+    if (EVP_PKEY_derive(pkey_ctx.get(), NULL, &skeylen) <= 0) throw std::runtime_error("EVP_PKEY_derive() failed");
     std::shared_ptr<uint8_t[]> shared_key_bytes(new uint8_t[skeylen]);
-    EVP_PKEY_derive(pkey_ctx.get(), shared_key_bytes.get(), &skeylen);
+    if (EVP_PKEY_derive(pkey_ctx.get(), shared_key_bytes.get(), &skeylen) <= 0) throw std::runtime_error("EVP_PKEY_derive() failed");
 
     std::shared_ptr<uint8_t[]> key(new uint8_t[EVP_CIPHER_key_length(cipher)]), iv(new uint8_t[EVP_CIPHER_iv_length(cipher)]);
     if (EVP_BytesToKey(cipher, EVP_md5(), nullptr, shared_key_bytes.get(), skeylen, 1, key.get(), iv.get()) == 0) {
@@ -36,9 +41,9 @@ static std::shared_ptr<EVP_PKEY> get_privkey(const std::string& privkey_b64)
     return privkey;
 }
 
-static std::shared_ptr<EVP_PKEY> get_pubkey(const uint8_t* pubkey_bytes)
+static std::shared_ptr<EVP_PKEY> get_pubkey(const std::shared_ptr<uint8_t[]> pubkey_bytes)
 {
-    std::shared_ptr<EVP_PKEY> pubkey(EVP_PKEY_new_raw_public_key(EVP_PKEY_X25519, NULL, pubkey_bytes, wghub::internal::WG_KEY_LEN), EVP_PKEY_free);
+    std::shared_ptr<EVP_PKEY> pubkey(EVP_PKEY_new_raw_public_key(EVP_PKEY_X25519, NULL, pubkey_bytes.get(), wghub::internal::WG_KEY_LEN), EVP_PKEY_free);
     if (!pubkey) throw std::runtime_error("Invalid public key");
     return pubkey;
 }
@@ -75,9 +80,9 @@ std::string make_urlsafe(const std::string& base64str)
     return urlsafe_str;
 }
 
-std::string encrypt(const std::string& str, EVP_PKEY* privkey/*mine*/, EVP_PKEY* pubkey/*peer's*/)
+std::string encrypt(const std::string& str, const std::shared_ptr<EVP_PKEY> privkey/*mine*/, const std::shared_ptr<EVP_PKEY> pubkey/*peer's*/)
 {
-    auto [key, iv] = generate_key_and_iv_from_shared_key(cipher, privkey, pubkey);
+    auto [key, iv] = generate_key_and_iv_from_shared_key(cipher, privkey.get(), pubkey.get());
 
     std::shared_ptr<EVP_CIPHER_CTX> ctx(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
     if (!EVP_EncryptInit_ex(ctx.get(), cipher, NULL, key.get(), iv.get())) throw std::runtime_error("EVP_EncryptInit_ex() failed");
@@ -92,11 +97,11 @@ std::string encrypt(const std::string& str, EVP_PKEY* privkey/*mine*/, EVP_PKEY*
     return base64_encode(buf, len + tmplen);
 }
 
-std::string decrypt(const std::string& encrypted_b64, EVP_PKEY* privkey/*mine*/, EVP_PKEY* pubkey/*peer's*/)
+std::string decrypt(const std::string& encrypted_b64, const std::shared_ptr<EVP_PKEY> privkey/*mine*/, const std::shared_ptr<EVP_PKEY> pubkey/*peer's*/)
 {
     auto encrypted_bytes = base64_decode(encrypted_b64);
 
-    auto [key, iv] = generate_key_and_iv_from_shared_key(cipher, privkey, pubkey);
+    auto [key, iv] = generate_key_and_iv_from_shared_key(cipher, privkey.get(), pubkey.get());
 
     std::shared_ptr<EVP_CIPHER_CTX> ctx(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
     if (!EVP_DecryptInit_ex(ctx.get(), cipher, NULL, key.get(), iv.get())) throw std::runtime_error("EVP_DecryptInit_ex() failed");
@@ -164,9 +169,9 @@ ClientConfig decrypt_and_parse_client_config(const std::string& encrypted_client
     auto peer_pubkey_b64 = encrypted_client_config_b64.substr(0, comma_pos);
     auto buf = encrypted_client_config_b64.substr(comma_pos + 1);
 
-    auto peer_pubkey = get_pubkey(internal::base64_decode(peer_pubkey_b64).first.get());
+    auto peer_pubkey = get_pubkey(internal::base64_decode(peer_pubkey_b64).first);
 
-    auto decrypted = internal::decrypt(buf, privkey.get(), peer_pubkey.get());
+    auto decrypted = internal::decrypt(buf, privkey, peer_pubkey);
 
     auto json = nlohmann::json::parse(decrypted);
     if (!json.contains("address")) throw std::runtime_error("Field 'address' is missing");
@@ -184,3 +189,20 @@ ClientConfig decrypt_and_parse_client_config(const std::string& encrypted_client
 }
 
 } // namespace wghub
+
+#ifdef WGHUB_TEST
+#include <iostream>
+int main(int argc, char* argv[])
+{
+    auto privkey = wghub::generate_private_key();
+    std::cout << "Private key = " << privkey << std::endl;
+    auto pubkey = wghub::get_public_key_from_private_key(privkey);
+    std::cout << "Corresponding public key = " << pubkey << std::endl;
+    auto pubkey_ptr = wghub::internal::base64_decode(pubkey).first;
+    auto encrypted = wghub::internal::encrypt("HOGE", get_privkey(privkey), get_pubkey(pubkey_ptr));
+    std::cout << "Encrypted data = " << encrypted << std::endl;
+    auto decrypted = wghub::internal::decrypt(encrypted, get_privkey(privkey), get_pubkey(pubkey_ptr));
+    std::cout << "Decrypted data = " << decrypted << std::endl;
+    return 0;
+}
+#endif

@@ -12,6 +12,8 @@ wghub-client: wghub-client.o libwghub.a
 wghub.so: *.cpp
 	g++ -std=c++20 -g -shared -fPIC -o $@ $^
 
+wghub-test: wghub.cpp
+	g++ -std=c++20 -g -DWGHUB_TEST -o $@ $^ -lcrypto
 
 libwghub.a: wghub.o
 	ar r $@ $^
