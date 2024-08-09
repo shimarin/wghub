@@ -22,10 +22,10 @@ libwghub.a: wghub.o
 	g++ -std=c++20 -Wall -c -o $@ $<
 
 install: all
-	mkdir -p /usr/local/bin /usr/local/include /usr/local/lib
-	cp -a wghub-server wghub-client /usr/local/bin/
-	cp -a libwghub.a /usr/local/lib/
-	cp -a wghub.h /usr/local/include/
+	mkdir -p $(DESTDIR)/usr/local/bin $(DESTDIR)/usr/local/include $(DESTDIR)/usr/local/lib
+	cp -a wghub-server wghub-client $(DESTDIR)/usr/local/bin/
+	cp -a libwghub.a $(DESTDIR)/usr/local/lib/
+	cp -a wghub.h $(DESTDIR)/usr/local/include/
 
 clean:
 	rm -f wghub-server whhub-client *.a *.o *.so privkey.txt
