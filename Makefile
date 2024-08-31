@@ -1,3 +1,5 @@
+PREFIX ?= /usr/local
+
 all: wghub-server wghub-client libnss_wghub.so
 
 wghub-server: wghub-server.o libwghub.a
@@ -22,10 +24,10 @@ libwghub.a: wghub.o
 	g++ -std=c++20 -Wall -c -o $@ $<
 
 install: all
-	mkdir -p $(DESTDIR)/usr/local/bin $(DESTDIR)/usr/local/include $(DESTDIR)/usr/local/lib
-	cp -a wghub-server wghub-client $(DESTDIR)/usr/local/bin/
-	cp -a libwghub.a $(DESTDIR)/usr/local/lib/
-	cp -a wghub.h $(DESTDIR)/usr/local/include/
+	install -Dm755 wghub-server $(DESTDIR)$(PREFIX)/bin/wghub-server
+	install -Dm755 wghub-client $(DESTDIR)$(PREFIX)/bin/wghub-client
+	install -Dm644 libwghub.a $(DESTDIR)$(PREFIX)/lib/libwghub.a
+	install -Dm644 wghub.h $(DESTDIR)$(PREFIX)/include/wghub.h
 
 clean:
 	rm -f wghub-server whhub-client *.a *.o *.so privkey.txt
