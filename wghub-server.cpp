@@ -11,7 +11,7 @@
 #include <ext/stdio_filebuf.h> // for __gnu_cxx::stdio_filebuf
 
 #include <argparse/argparse.hpp>
-#include <iniparser4/iniparser.h>
+#include <iniparser/iniparser.h>
 #include <nlohmann/json.hpp>
 
 #include "wghub.h"

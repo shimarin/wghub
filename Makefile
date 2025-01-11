@@ -3,7 +3,7 @@ PREFIX ?= /usr/local
 all: wghub-server wghub-client libnss_wghub.so
 
 wghub-server: wghub-server.o libwghub.a
-	g++ -std=c++20 -o $@ $^ -lcrypto -liniparser4
+	g++ -std=c++20 -o $@ $^ -lcrypto -liniparser
 
 libnss_wghub.so: nss_wghub.cpp
 	g++ -std=c++20 -o $@ $^ -fPIC -shared -Wl,-soname,libnss_wghub.so.2
