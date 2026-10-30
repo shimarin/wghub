@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include <openssl/err.h>
 #include <nlohmann/json.hpp>
 
